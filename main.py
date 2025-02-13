@@ -19,26 +19,30 @@ aura_sr = AuraSR.from_pretrained("fal-ai/AuraSR") # image upscaling model, based
 
 
 def upscale_image(image):
-	if image.mode == "RGBA":
-		rgb_image = image.convert("RGB")
-		alpha_channel = np.array(image)[:, :, 3]
-	else:
-		rgb_image = image
-		alpha_channel = None
+    # 如果图片是 RGBA 模式，分离 RGB 和 Alpha 通道
+    if image.mode == "RGBA":
+        rgb_image = image.convert("RGB")  # 转换为 RGB 模式
+        alpha_channel = np.array(image)[:, :, 3]  # 提取 Alpha 通道
+    else:
+        rgb_image = image
+        alpha_channel = None
 
-	upscaled_rgb_image = aura_sr.upscale_4x(rgb_image)
-	print('image upscaled to 4x.\n')
+    # 调用模型进行 4x 放大
+    upscaled_rgb_image = aura_sr.upscale_4x(rgb_image)
+    print('image upscaled to 4x.\n')
 
-	if alpha_channel is not None:
-		alpha_channel_image = Image.fromarray(alpha_channel)
-		alpha_channel_resized = alpha_channel_image.resize(upscaled_rgb_image.size, Image.Resampling.LANCZOS) # 其等价于旧版的Image.ANTIALIAS和Image.LANCZOS
+    # 如果存在 Alpha 通道，重新合并 Alpha 通道
+    if alpha_channel is not None:
+        alpha_channel_image = Image.fromarray(alpha_channel)
+        alpha_channel_resized = alpha_channel_image.resize(upscaled_rgb_image.size, Image.Resampling.LANCZOS)
 
-		upscaled_rgb_image_with_alpha = np.dstack([upscaled_rgb_image, np.array(alpha_channel_resized)])
-		upscaled_image = Image.fromarray(upscaled_rgb_image_with_alpha, "RGBA")
-	else:
-		upscaled_image = Image.fromarray(upscaled_rgb_image)
+        # 将放大后的 RGB 图像和 Alpha 通道合并
+        upscaled_rgb_image_with_alpha = np.dstack([np.array(upscaled_rgb_image), np.array(alpha_channel_resized)])
+        upscaled_image = Image.fromarray(upscaled_rgb_image_with_alpha, "RGBA")
+    else:
+        upscaled_image = upscaled_rgb_image  # 直接使用 upscaled_rgb_image
 
-	return upscaled_image
+    return upscaled_image
 
 
 def batch_upscale(image_paths_file):
